@@ -1,0 +1,2 @@
+print("AI Clothing App")
+
