@@ -12,7 +12,7 @@ options = vision.PoseLandmarkerOptions(
 )
 detector = vision.PoseLandmarker.create_from_options(options)
 
-image_path = "images (1).jpg"  # 换成你的全身照片
+image_path = "images.jpg"  # 换成你的全身照片
 mp_image = mp.Image.create_from_file(image_path)
 
 result = detector.detect(mp_image)

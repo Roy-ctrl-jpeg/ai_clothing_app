@@ -9,7 +9,7 @@ processor = SegformerImageProcessor.from_pretrained("mattmdjaga/segformer_b2_clo
 model = AutoModelForSemanticSegmentation.from_pretrained("mattmdjaga/segformer_b2_clothes")
 
 # 读取图片
-image_path = "images (1).jpg"  # 换成你的照片
+image_path = "images.jpg"  # 换成你的照片
 image = Image.open(image_path).convert("RGB")
 
 # 预处理并进行分割

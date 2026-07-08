@@ -13,7 +13,7 @@ options = vision.ImageSegmenterOptions(
 )
 segmenter = vision.ImageSegmenter.create_from_options(options)
 
-image_path = "images (1).jpg"  # 换成你的照片
+image_path = "images.jpg"  # 换成你的照片
 mp_image = mp.Image.create_from_file(image_path)
 
 result = segmenter.segment(mp_image)
