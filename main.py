@@ -9,6 +9,8 @@ import io
 from transformers import SegformerImageProcessor, AutoModelForSemanticSegmentation
 from PIL import Image
 import torch
+import os
+import replicate
 
 app = FastAPI()
 
@@ -95,3 +97,37 @@ async def segment_clothes(file: UploadFile = File(...)):
 
     _, encoded_image = cv2.imencode(".png", result)
     return StreamingResponse(io.BytesIO(encoded_image.tobytes()), media_type="image/png")
+
+@app.post("/try-on")
+async def try_on(
+    model_file: UploadFile = File(...),
+    garment_file: UploadFile = File(...),
+):
+    # 先把上传的图片暂存到本地
+    model_path = f"temp_model_{model_file.filename}"
+    garment_path = f"temp_garment_{garment_file.filename}"
+
+    with open(model_path, "wb") as f:
+        f.write(await model_file.read())
+    with open(garment_path, "wb") as f:
+        f.write(await garment_file.read())
+
+    # 呼叫 Replicate 的 IDM-VTON 模型
+    with open(garment_path, "rb") as garm, open(model_path, "rb") as human:
+        output = replicate.run(
+            "cuuupid/idm-vton:0513734a452173b8173e907e3a59d19a36266e55b48528559432bd21c7d7e985",
+            input={
+                "garm_img": garm,
+                "human_img": human,
+                "garment_des": "a piece of clothing",
+            }
+        )
+
+    # 把结果读出来，回传给 App
+    result_bytes = output.read()
+
+    # 清理暂存文件
+    os.remove(model_path)
+    os.remove(garment_path)
+
+    return StreamingResponse(io.BytesIO(result_bytes), media_type="image/png")
