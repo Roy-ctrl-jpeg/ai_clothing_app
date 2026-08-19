@@ -14,7 +14,7 @@ import replicate
 
 app = FastAPI()
 
-# 载入姿态侦测模型（服务器启动时只载入一次，效率比较好）
+# Load the pose detection model (loaded once at server startup for efficiency)
 model_path = "pose_landmarker.task"
 base_options = python.BaseOptions(model_asset_path=model_path)
 options = vision.PoseLandmarkerOptions(
@@ -22,7 +22,7 @@ options = vision.PoseLandmarkerOptions(
     output_segmentation_masks=False
 )
 detector = vision.PoseLandmarker.create_from_options(options)
-# 载入服装分割模型
+# Load the clothing segmentation model
 seg_processor = SegformerImageProcessor.from_pretrained("mattmdjaga/segformer_b2_clothes")
 seg_model = AutoModelForSemanticSegmentation.from_pretrained("mattmdjaga/segformer_b2_clothes")
 
@@ -37,20 +37,20 @@ POSE_CONNECTIONS = [
 
 @app.get("/")
 def read_root():
-    return {"message": "AI Clothing App Backend 已启动！"}
+    return {"message": "AI Clothing App Backend is running!"}
 
 @app.post("/detect-pose")
 async def detect_pose(file: UploadFile = File(...)):
-    # 读取上传的图片
+    # Read the uploaded image
     contents = await file.read()
     nparr = np.frombuffer(contents, np.uint8)
     image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    # 转换成 MediaPipe 需要的格式
+    # Convert to the format required by MediaPipe
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image_rgb)
 
-    # 进行姿态侦测
+    # Run pose detection
     result = detector.detect(mp_image)
 
     if result.pose_landmarks:
@@ -66,7 +66,7 @@ async def detect_pose(file: UploadFile = File(...)):
                 x, y = int(landmark.x * w), int(landmark.y * h)
                 cv2.circle(image, (x, y), 4, (0, 0, 255), -1)
 
-    # 把处理好的图片转成可以回传的格式
+    # Encode the processed image so it can be returned
     _, encoded_image = cv2.imencode(".png", image)
     return StreamingResponse(io.BytesIO(encoded_image.tobytes()), media_type="image/png")
 
@@ -90,7 +90,7 @@ async def segment_clothes(file: UploadFile = File(...)):
     )
     pred_seg = upsampled_logits.argmax(dim=1)[0].numpy()
 
-    clothing_classes = [3, 4, 5, 6, 7]  # 上衣, 裙子, 裤子, 洋装, 皮带
+    clothing_classes = [3, 4, 5, 6, 7]  # upper-clothes, skirt, pants, dress, belt
     mask = np.isin(pred_seg, clothing_classes).astype(np.uint8) * 255
 
     result = cv2.bitwise_and(image_cv, image_cv, mask=mask)
@@ -103,7 +103,7 @@ async def try_on(
     model_file: UploadFile = File(...),
     garment_file: UploadFile = File(...),
 ):
-    # 先把上传的图片暂存到本地
+    # Temporarily save the uploaded images locally
     model_path = f"temp_model_{model_file.filename}"
     garment_path = f"temp_garment_{garment_file.filename}"
 
@@ -112,7 +112,7 @@ async def try_on(
     with open(garment_path, "wb") as f:
         f.write(await garment_file.read())
 
-    # 呼叫 Replicate 的 IDM-VTON 模型
+    # Call Replicate's IDM-VTON model
     with open(garment_path, "rb") as garm, open(model_path, "rb") as human:
         output = replicate.run(
             "cuuupid/idm-vton:0513734a452173b8173e907e3a59d19a36266e55b48528559432bd21c7d7e985",
@@ -123,10 +123,10 @@ async def try_on(
             }
         )
 
-    # 把结果读出来，回传给 App
+    # Read the result and return it to the app
     result_bytes = output.read()
 
-    # 清理暂存文件
+    # Clean up temporary files
     os.remove(model_path)
     os.remove(garment_path)
 

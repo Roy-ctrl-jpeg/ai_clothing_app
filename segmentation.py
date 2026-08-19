@@ -13,7 +13,7 @@ options = vision.ImageSegmenterOptions(
 )
 segmenter = vision.ImageSegmenter.create_from_options(options)
 
-image_path = "images.jpg"  # 换成你的照片
+image_path = "images.jpg"  # replace with your own photo
 mp_image = mp.Image.create_from_file(image_path)
 
 result = segmenter.segment(mp_image)
@@ -21,10 +21,10 @@ category_mask = result.category_mask.numpy_view()
 
 image = cv2.imread(image_path)
 
-# category_mask: 0 = 背景, 1 = 人
+# category_mask: 0 = background, 1 = person
 mask = (category_mask < 0.5).astype(np.uint8) * 255
 
-# 把背景变绿色，方便你看出分割效果
+# Turn the background green so the segmentation result is easy to see
 green_bg = np.zeros_like(image)
 green_bg[:] = (0, 255, 0)
 
